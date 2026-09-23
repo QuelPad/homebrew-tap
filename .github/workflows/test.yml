@@ -25,13 +25,18 @@ jobs:
           ls -l "$(brew --prefix)/bin/quelpad"
           codesign --verify --deep --strict /Applications/QuelPad.app
           spctl --assess --type execute -v /Applications/QuelPad.app
-      # First launch of a brew install, quarantine and all: the Store build once
-      # shipped with a first session whose Bun worker never came up.
+      # First launch of a brew install: the Store build once shipped with a
+      # first session whose Bun worker never came up. The quarantine xattr is
+      # dropped first because Gatekeeper's "downloaded from the Internet"
+      # prompt (the same one a .dmg install gets) waits for a click forever
+      # on a runner; dropping it stands in for the user clicking Open.
       - name: first launch brings up the Bun worker
+        timeout-minutes: 5
         run: |
           d="$HOME/Library/Application Support/com.quelpad.app"
-          xattr -l /Applications/QuelPad.app | head -5 || true
-          open -a /Applications/QuelPad.app
+          xattr -p com.apple.quarantine /Applications/QuelPad.app || true
+          xattr -dr com.apple.quarantine /Applications/QuelPad.app
+          open -a /Applications/QuelPad.app &
           for _ in $(seq 1 120); do
             pgrep -f 'runner\.ts' >/dev/null && break
             sleep 1
@@ -42,6 +47,7 @@ jobs:
           pgrep -f 'runner\.ts' >/dev/null
           test -f "$d/samples/chinook.sqlite"
       - name: CLI reads the sample database
+        timeout-minutes: 3
         run: quelpad schema --connect chinook | head -30
       - name: quit
         if: always()
