@@ -15,6 +15,7 @@ jobs:
           tap="$(brew --repository)/Library/Taps/quelpad/homebrew-tap"
           mkdir -p "$(dirname "$tap")"
           ln -s "$GITHUB_WORKSPACE" "$tap"
+          brew trust quelpad/tap
       - run: brew style quelpad/tap
       - run: brew audit --cask --online --strict quelpad/tap/quelpad
       - run: brew install --cask quelpad/tap/quelpad
