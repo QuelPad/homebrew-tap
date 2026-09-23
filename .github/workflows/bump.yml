@@ -1,0 +1,53 @@
+name: bump
+
+# Polls the same latest.json the in-app updater reads. Self-contained on
+# purpose: the release pipeline needs no token for this repo, and a missed
+# release is caught within hours instead of never.
+on:
+  schedule:
+    - cron: "17 */3 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  bump:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: compare versions
+        id: v
+        run: |
+          latest="$(curl -fsSL https://updates.quelpad.dev/stable/latest.json | jq -r .version)"
+          current="$(sed -nE 's/^  version "(.*)"$/\1/p' Casks/quelpad.rb)"
+          echo "latest=$latest current=$current"
+          echo "latest=$latest" >> "$GITHUB_OUTPUT"
+          [ -n "$latest" ] && [ "$latest" != "$current" ] && echo "changed=1" >> "$GITHUB_OUTPUT" || true
+      - name: update cask
+        if: steps.v.outputs.changed
+        env:
+          V: ${{ steps.v.outputs.latest }}
+        run: |
+          curl -fsSLo q.dmg "https://updates.quelpad.dev/download/QuelPad_${V}_aarch64.dmg"
+          sha="$(shasum -a 256 q.dmg | cut -d' ' -f1)"
+          rm q.dmg
+          sed -i '' -E "s/^  version \".*\"$/  version \"${V}\"/; s/^  sha256 \".*\"$/  sha256 \"${sha}\"/" Casks/quelpad.rb
+          git diff
+      # Pushes made with GITHUB_TOKEN do not trigger test.yml, so gate here.
+      - name: install before publishing
+        if: steps.v.outputs.changed
+        run: |
+          tap="$(brew --repository)/Library/Taps/quelpad/homebrew-tap"
+          mkdir -p "$(dirname "$tap")"
+          ln -s "$GITHUB_WORKSPACE" "$tap"
+          brew audit --cask --online quelpad/tap/quelpad
+          brew install --cask quelpad/tap/quelpad
+          brew uninstall --cask quelpad
+      - name: commit
+        if: steps.v.outputs.changed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -am "quelpad ${{ steps.v.outputs.latest }}"
+          git push

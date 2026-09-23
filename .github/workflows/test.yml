@@ -1,0 +1,27 @@
+name: test
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  cask:
+    runs-on: macos-latest # arm64
+    steps:
+      - uses: actions/checkout@v4
+      - name: tap this checkout
+        run: |
+          tap="$(brew --repository)/Library/Taps/quelpad/homebrew-tap"
+          mkdir -p "$(dirname "$tap")"
+          ln -s "$GITHUB_WORKSPACE" "$tap"
+      - run: brew style quelpad/tap
+      - run: brew audit --cask --online --strict quelpad/tap/quelpad
+      - run: brew install --cask quelpad/tap/quelpad
+      - name: app and CLI landed
+        run: |
+          test -d /Applications/QuelPad.app
+          ls -l "$(brew --prefix)/bin/quelpad"
+          codesign --verify --deep --strict /Applications/QuelPad.app
+          spctl --assess --type execute -v /Applications/QuelPad.app
+      - run: brew uninstall --cask quelpad
