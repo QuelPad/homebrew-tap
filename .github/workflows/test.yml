@@ -32,12 +32,12 @@ jobs:
           d="$HOME/Library/Application Support/com.quelpad.app"
           xattr -l /Applications/QuelPad.app | head -5 || true
           open -a /Applications/QuelPad.app
-          for i in $(seq 1 120); do
+          for _ in $(seq 1 120); do
             pgrep -f 'runner\.ts' >/dev/null && break
             sleep 1
           done
           echo "--- processes"; pgrep -fl -i 'quelpad|bun' || true
-          echo "--- app data"; ls "$d" || true; ls "$d/app-packages" 2>/dev/null | head || true
+          echo "--- app data"; ls "$d" || true; find "$d/app-packages" -maxdepth 1 2>/dev/null | head || true
           echo "--- logs"; tail -n 40 "$HOME/Library/Logs/com.quelpad.app/"* 2>/dev/null || true
           pgrep -f 'runner\.ts' >/dev/null
           test -f "$d/samples/chinook.sqlite"
