@@ -48,7 +48,9 @@ jobs:
           test -f "$d/samples/chinook.sqlite"
       - name: CLI reads the sample database
         timeout-minutes: 3
-        run: quelpad schema --connect chinook | head -30
+        run: |
+          set -o pipefail
+          quelpad schema --connect=chinook | head -30
       - name: quit
         if: always()
         run: osascript -e 'quit app "QuelPad"' || true
