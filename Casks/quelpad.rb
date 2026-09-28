@@ -1,6 +1,6 @@
 cask "quelpad" do
-  version "0.9.9"
-  sha256 "3821dc7229c823a0e572d4a484511181189cf38e8406ff611453b03d69320c54"
+  version "0.9.10"
+  sha256 "a39e77507ee623cd9c3493b3f52ed5ce2656068118891b55881fd304067f040a"
 
   url "https://updates.quelpad.dev/download/QuelPad_#{version}_aarch64.dmg"
   name "QuelPad"
